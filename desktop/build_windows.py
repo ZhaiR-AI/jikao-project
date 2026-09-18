@@ -92,7 +92,7 @@ def main():
 HELP = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>成考助手 · 使用说明</title><style>body{font:17px/1.85 system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 24px;color:#17263d;background:#f7f9fc}section{background:white;border:1px solid #dbe3ed;border-radius:16px;padding:24px;margin:20px 0}h1,h2{line-height:1.4}code{background:#eef2f7;padding:2px 6px}a{color:#185abd}li{margin:8px 0}</style>
 <h1>成考助手 · Windows 便携版</h1><p>适用于 Windows 10/11 的 64 位电脑。无需安装 Python，无需输入命令。</p>
-<section><h2>第一次使用</h2><ol><li>右键 ZIP，选择“全部解压”。不要在压缩包内运行，不要只复制 EXE。</li>
+<section><h2>第一次使用</h2><ol><li>右键 ZIP，选择“全部解压”，直接解压到桌面等较短路径。不要放进多层文件夹，否则 Windows 可能提示路径过长、无法解压。不要在压缩包内运行，不要只复制 EXE。</li>
 <li>双击“启动成考助手.exe”。</li><li>填写模型平台提供的<b>接口地址、模型名称和 API Key</b>，点击“保存配置并启动”。</li>
 <li>浏览器会自动打开试卷页面。第一次选一份只有一页、题目完整的 PDF，验证生成和判卷。</li></ol>
 <p>以后双击 EXE 即可，已保存配置会自动载入。暂时没有模型配置，也可以点“打开页面”浏览界面。</p></section>
@@ -104,7 +104,7 @@ HELP = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="vi
 <section><h2>数据和更新</h2><p>点击启动窗口的“数据目录”可找到自己的卷子和学习记录。实际位置是 <code>程序文件/app/data</code>；模型配置在同一层的 <code>models.json</code>。</p>
 <p>更新前停止程序，备份 data、models.json（如有 .env 也一并备份）。解压新版本后，把这些文件复制到新版本的同一位置。不要直接删除旧文件夹。</p>
 <p>关闭启动窗口会停止服务。关闭前保存作答，等待生成或判卷完成；只关浏览器不会停止服务。</p></section>
-<section><h2>打不开怎么办？</h2><ul><li>确认已经完整解压，并把整个软件文件夹放在桌面或文档等可写目录。</li><li>使用 Windows 10/11 64 位系统。首次启动可能需要稍等。</li><li>查看同目录的“启动日志.txt”。反馈前遮住密钥和个人内容。</li><li>此试用包尚未进行商业代码签名，Windows 可能显示未知发布者。请核对下载来自项目官方 Releases，不要关闭系统防护。</li></ul>
+<section><h2>打不开怎么办？</h2><ul><li>确认已经完整解压，并把整个软件文件夹放在桌面等可写的短目录。若解压报“路径太长”或“找不到文件”，请换一个更短的位置重新完整解压，例如有 D 盘时使用 D:\\Chengkao。不要跳过报错后继续运行不完整的文件。</li><li>使用 Windows 10/11 64 位系统。首次启动可能需要稍等。</li><li>查看同目录的“启动日志.txt”。反馈前遮住密钥和个人内容。</li><li>此试用包尚未进行商业代码签名，Windows 可能显示未知发布者。请核对下载来自项目官方 Releases，不要关闭系统防护。</li></ul>
 <p><a href="https://github.com/ZhaiR-AI/jikao-project/issues">反馈问题</a> · <a href="https://github.com/ZhaiR-AI/jikao-project">项目主页</a></p></section></html>'''
 
 

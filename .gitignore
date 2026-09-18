@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 models.json
+models.json.bak
+models.json.tmp
 mcp.json
 
 # Local data, study records, uploads, and runtime state

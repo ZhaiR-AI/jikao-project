@@ -114,10 +114,23 @@ def validate_paper(paper):
                 add("declared_question_count", f"原文明确要求 {declared[1]} 题，当前大题只识别到 {len(found)} 个不同题号。",
                     "error", key, pages=[page for page, _ in lines])
         expected = defaultdict(set)
+        if source_kinds.get(key) == "writing":
+            source_text = "\n".join(line for _, line in lines)
+            topic = re.search(r"\btopic\s*[:：]\s*(.+?)(?:\.(?:\s|$)|\n\s*\n|$)", source_text, re.I | re.S)
+            if topic:
+                retained = "\n".join(str(s.get("description", "")) + "\n" + "\n".join(q.get("stem", "") for q in questions(s))
+                                     for s in sections if section_key(s) == key or kind(s.get("title", "")) == "writing")
+                compact = lambda value: re.sub(r"\s+", "", value).casefold()
+                if compact(topic[1]) not in compact(retained):
+                    add("missing_writing_prompt", "作文题目未完整保留，请对照原文重新整理。", "error", key,
+                        pages=[page for page, _ in lines])
+        writing_outline = False
         for page_number, line in lines:
             numbered = re.match(r"\s*(\d{1,3})\s*[.、]\s+\S", line)
-            if numbered:
+            if numbered and not writing_outline:
                 expected[numbered[1]].add(page_number)
+            if source_kinds.get(key) == "writing" and re.search(r"\boutline\b|提纲|要点", line, re.I):
+                writing_outline = True
             for blank in re.findall(r"_+\s*(\d{1,3})\s*_+", line):
                 expected[blank].add(page_number)
         actual_numbers = actual.get(key)

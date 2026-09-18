@@ -760,7 +760,12 @@ def _build_standard_exam_from_ocr(
             if section:
                 sections.append(section)
         elif part_number == "5":
-            section = _parse_standard_writing_section(block)
+            previous_numbers = [int(q["number"]) for existing in sections
+                                for q in _section_questions(existing)
+                                if str(q.get("number", "")).isdigit()]
+            section = _parse_standard_writing_section(
+                block, default_number=str(max(previous_numbers, default=53) + 1)
+            )
             if section:
                 sections.append(section)
 
@@ -982,7 +987,7 @@ def _parse_standard_cloze_section(block: dict[str, Any]) -> dict[str, Any] | Non
 
 def _parse_standard_reading_section(block: dict[str, Any]) -> dict[str, Any] | None:
     directions, body = _split_standard_directions(block["text"])
-    passage_pattern = re.compile(r"(?mi)^[ \t]*(?:[A-D]\s+)?Passage\s+(\d+|One|Two|Three|Four)\b[^\n]*$")
+    passage_pattern = re.compile(r"(?mi)^[^\nA-Za-z0-9]{0,8}(?:[A-D]\s+)?Passage\s+(\d+|One|Two|Three|Four)\b[^\n]*$")
     matches = list(passage_pattern.finditer(body))
     # A repeated 'Passage One — Questions ...' is a continuation, not a new text.
     unique_matches = []
@@ -1067,19 +1072,21 @@ def _parse_standard_translation_section(block: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def _parse_standard_writing_section(block: dict[str, Any]) -> dict[str, Any] | None:
+def _parse_standard_writing_section(
+    block: dict[str, Any], *, default_number: str = "54"
+) -> dict[str, Any] | None:
     numbered = re.search(r"(?m)^\s*(\d+)\s*[.、]\s+", block["text"])
-    directions, body = _split_standard_directions(block["text"])
+    # Outline bullets belong to one composition; they are not question numbers.
+    if (numbered and numbered[1] == "1"
+            and re.search(r"\boutline\b|提纲|要点", block["text"][:numbered.start()], re.I)):
+        numbered = None
+    body = block["text"]
     if numbered:
-        directions = ""
-        body = block["text"][numbered.end():]
+        body = block["text"][:numbered.start()] + block["text"][numbered.end():]
     stem = _clean_line_text(body)
-    if not stem:
-        stem = directions
-        directions = ""
     question = {
         "id": "",
-        "number": numbered[1] if numbered else "54",
+        "number": numbered[1] if numbered else default_number,
         "type": "essay",
         "stem": stem,
         "options": [],
@@ -1094,7 +1101,7 @@ def _parse_standard_writing_section(block: dict[str, Any]) -> dict[str, Any] | N
     return {
         "id": "section-writing",
         "title": block["title"],
-        "description": directions,
+        "description": "",
         "total_score": _as_float(block.get("points"), 15) or 15,
         "score": 15,
         "questions": [question],
