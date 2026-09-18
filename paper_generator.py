@@ -299,33 +299,6 @@ def render_pdf_for_ocr(
     }
 
 
-def _read_pdf_text_pages(source_pdf: Path, page_count: int) -> dict[int, str]:
-    """Read usable native text; leave scanned/image-heavy pages for OCR.
-
-    Block boundaries preserve paragraphs and directions. Do not flatten the
-    page or reorder individual words: that interleaves multiple-choice options.
-    """
-    import fitz
-    import unicodedata
-    result = {}
-    with fitz.open(source_pdf) as document:
-        for index in range(min(page_count, len(document))):
-            page = document[index]
-            if any(fitz.Rect(info["bbox"]).get_area() > page.rect.get_area() * .4
-                   for info in page.get_image_info()):
-                continue
-            blocks = page.get_text("blocks")
-            text = unicodedata.normalize("NFC", "\n\n".join(b[4].strip() for b in blocks if b[6] == 0)).replace("\xa0", " ")
-            # Answer lines are layout, not evidence of corrupt character maps.
-            visible = re.sub(r"[\s_]", "", text)
-            if len(visible) < 100 or "\ufffd" in text or "\x00" in text:
-                continue
-            if len(re.findall(r"[A-Za-z\u4e00-\u9fff]", text)) < len(visible) * .5:
-                continue
-            result[index + 1] = text
-    return result
-
-
 async def ocr_page_images(
     *,
     llm: LLMManager,
@@ -336,25 +309,23 @@ async def ocr_page_images(
     source_pdf: Path | None = None,
 ) -> list[dict[str, Any]]:
     image_paths = [Path(path) for path in page_images]
-    native_pages = await asyncio.to_thread(_read_pdf_text_pages, source_pdf, len(image_paths)) if source_pdf else {}
     semaphore = asyncio.Semaphore(
         max(1, min(int(ocr_concurrency or DEFAULT_OCR_CONCURRENCY), MAX_OCR_CONCURRENCY))
     )
 
     async def run_ocr(index: int, image_path: Path) -> dict[str, Any]:
         cached = next((page for page in (cached_pages or []) if page.get("page") == index), None)
-        if cached:
+        if cached and cached.get("extraction_method") == "vision_ocr":
             return cached
         async with semaphore:
-            text = native_pages.get(index)
-            method = "pdf_text" if text else "vision_ocr"
-            if not text:
-                text = await _ocr_page(llm, image_path, index, len(image_paths))
+            # PDF text layers can contain plausible-looking OCR garbage and
+            # scrambled columns. Every PDF page must go through the vision model.
+            text = await _ocr_page(llm, image_path, index, len(image_paths))
             result = {
                 "page": index,
                 "image": str(image_path.relative_to(PROJECT_DIR)).replace("\\", "/"),
                 "text": text.strip(),
-                "extraction_method": method,
+                "extraction_method": "vision_ocr",
             }
             if on_page:
                 on_page(result)
@@ -424,7 +395,7 @@ async def build_exam_papers(
         scoped_pages = [
             page for page in ocr_pages if start_page <= int(page.get("page", 0)) <= end_page
         ] or ocr_pages
-        standard_paper = _build_standard_exam_from_ocr(
+        standard_paper = None if ocr_doc["source"].get("input_type") == "document" else _build_standard_exam_from_ocr(
             paper_id=paper_id,
             original_name=original_name,
             exam_hint=exam,
@@ -489,7 +460,7 @@ def create_exam_build_jobs(
         scoped_pages = [
             page for page in ocr_pages if start_page <= int(page.get("page", 0)) <= end_page
         ] or ocr_pages
-        standard_paper = _build_standard_exam_from_ocr(
+        standard_paper = None if ocr_doc["source"].get("input_type") == "document" else _build_standard_exam_from_ocr(
             paper_id=f"{collection_id}-{index}",
             original_name=original_name,
             exam_hint=exam,
@@ -585,6 +556,8 @@ def assemble_exam_papers(
             }
         )
         paper["ocr_pages"] = job["scoped_pages"]
+        paper["source"]["unit"] = ocr_doc["source"].get("unit", "页")
+        paper["source"]["input_type"] = ocr_doc["source"].get("input_type", "pdf")
         papers.append(paper)
     return papers
 
@@ -799,6 +772,11 @@ def _is_better_standard_paper(
     standard_paper: dict[str, Any],
     current_paper: dict[str, Any],
 ) -> bool:
+    # The CET parser only succeeds after checking all 55 numbered items,
+    # option sets and reading groups. Keep its source-backed structure and
+    # weights instead of model-invented Part labels or uniform listening scores.
+    if standard_paper.get("exam_format") == "cet4":
+        return True
     standard_count = _paper_question_count(standard_paper)
     if standard_count < 50:
         return False
@@ -1515,6 +1493,10 @@ async def _ocr_page(
 2. 不要总结，不要补充答案，不要改写题意。
 3. 无法识别的局部用 [无法识别] 标注。
 4. 输出纯文本，不要 Markdown 围栏。
+5. 按阅读顺序还原多栏内容，保留每道题的完整题干及对应选项，不能只输出选项。
+6. 同一行的 Part/Section/Passage 标题合为一行；保留原来的罗马数字、题号和选项字母。
+7. 选词填空的每个编号空位写为 __题号__，词库逐项保留；阅读匹配的段落字母和全文必须保留。
+8. 只识别本页可见内容，跨页的未完句也原样保留，不能猜写下一页。听力原卷若只有选项，不编造音频中的问题。
 
 当前页：{page_number}/{total_pages}
 """
@@ -1531,7 +1513,7 @@ async def _ocr_page(
             ],
             model_id="vision",
             temperature=0,
-            max_tokens=4096,
+            max_tokens=8192,
         )
         text = _response_text(response).strip()
         if not text:
@@ -1736,7 +1718,7 @@ JSON Schema：
 5. 每个 Part 的标题必须保留时间和总分，例如 "Part I Vocabulary and Structure (20 minutes, 30 points)"。
 6. 每个 Part 的 Directions 不是题目，必须放进对应 section.description 的开头。
 7. 同一个 Part 内通常每题分值一致；section.total_score 写该 Part 总分，section.score 写每题分数；questions 中不要写 score。
-8. 阅读理解中 Passage/文章正文不是题目；Part III 必须作为一个完整 section，并用 section.groups 表达 Passage 1、Passage 2 等材料题组。
+8. 阅读理解中 Passage/文章正文不是题目；按原卷实际 Part 编号和标题分组，不要假定阅读一定是 Part III。用 section.groups 表达各篇文章及其对应题目，保留完整文章和每个问题的题干。
 9. 每个 group.description 放对应 Passage 文章正文，每个 group.questions 放该 Passage 后面的题目；section.description 只放 Directions/总说明。
 10. 阅读题 question.stem 只能是具体问题或未完成陈述，不要把整篇文章重复塞进 stem。
 11. 完形填空必须把 Directions 和完整篇章放进 section.description，questions 只列每个空的选项题；不要把 21-40 或 21-31 当成一道题。
@@ -1756,9 +1738,12 @@ OCR：
             [{"role": "user", "content": prompt}],
             model_id="default",
             temperature=0,
-            max_tokens=5000,
+            max_tokens=8192,
         )
-        return _parse_json_object(_response_text(response))
+        parsed = _parse_json_object(_response_text(response))
+        if not isinstance(parsed.get("sections"), list):
+            raise PaperGenerationError("题目整理结果缺少完整的大题列表，请重试。")
+        return parsed
 
     data = await _retry_generation_call(
         request_chunk,
@@ -2536,21 +2521,20 @@ def _parse_json_object(text: str) -> dict[str, Any]:
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
         cleaned = re.sub(r"\s*```$", "", cleaned)
+    if cleaned.startswith("["):
+        raise PaperGenerationError("模型应返回完整的 JSON 对象，而不是对象列表。")
+    start = cleaned.find("{")
+    if start < 0:
+        raise PaperGenerationError("模型没有返回 JSON 对象")
     try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        decoder = json.JSONDecoder()
-        for start in [i for i, ch in enumerate(cleaned) if ch == "{"]:
-            try:
-                value, _ = decoder.raw_decode(cleaned[start:])
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                return value
-        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        if not match:
-            raise PaperGenerationError("模型没有返回 JSON 对象")
-        return json.loads(match.group(0))
+        # Never accept an inner question/options object when the outer JSON
+        # was cut off: that silently turns a whole window into zero questions.
+        value, _ = json.JSONDecoder().raw_decode(cleaned[start:])
+    except json.JSONDecodeError as exc:
+        raise PaperGenerationError("模型返回的 JSON 不完整或格式错误，需要重新整理该部分。") from exc
+    if not isinstance(value, dict):
+        raise PaperGenerationError("模型没有返回 JSON 对象")
+    return value
 
 
 async def grade_paper_submission(

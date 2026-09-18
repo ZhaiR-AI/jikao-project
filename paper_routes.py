@@ -81,14 +81,16 @@ async def retry_generation_job(job_id: str):
 
 @router.post("/generation-jobs", status_code=202)
 async def create_generation_job(file: UploadFile = File(...), max_pages: int | None = None, ocr_concurrency: int = DEFAULT_OCR_CONCURRENCY):
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "请上传 PDF 文件")
+    from document_reader import TEXT_EXTENSIONS
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in TEXT_EXTENSIONS | {".pdf"}:
+        raise HTTPException(400, "请上传 PDF、Word（.docx）、TXT 或 Markdown 文件；旧版 .doc 请先另存为 .docx 或 PDF。")
     if max_pages is not None and max_pages < 1:
         raise HTTPException(400, "最多处理页数必须大于 0")
     ensure_data_dirs()
     # Keep the source durable so a server restart can resume the job.
     from uuid import uuid4
-    target = PROJECT_DIR / "data" / "uploads" / f"job-{uuid4().hex}.pdf"
+    target = PROJECT_DIR / "data" / "uploads" / f"job-{uuid4().hex}{suffix}"
     with target.open("wb") as handle:
         while chunk := await file.read(1024 * 1024):
             handle.write(chunk)
@@ -119,7 +121,8 @@ async def get_paper_source(paper_id: str):
             pages = [page for page in pages if start <= page["page"] <= end]
         pdf = PROJECT_DIR / "data/uploads" / f"{source_id}.pdf"
         pdf_url = f"/paper-data/uploads/{source_id}.pdf" if re.fullmatch(r"[a-f0-9]{32}", source_id) and pdf.exists() else None
-        return {"pages": [{"page": p["page"], "text": p.get("text", "")} for p in pages], "pdf_url": pdf_url}
+        return {"pages": [{"page": p["page"], "text": p.get("text", "")} for p in pages], "pdf_url": pdf_url,
+                "unit": paper.get("source", {}).get("unit", "页")}
     except (ValueError, FileNotFoundError) as exc:
         raise HTTPException(404, str(exc)) from exc
 

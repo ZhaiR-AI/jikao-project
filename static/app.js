@@ -254,7 +254,7 @@ function renderPaper(paper) {
   const questions = flattenQuestions(currentPaper);
   paperTitle.textContent = currentPaper.title || "未命名试卷";
   paperDesc.textContent = currentPaper.description || "";
-  paperMeta.textContent = `${currentPaper.source?.file_name || "PDF"} · 第 ${currentPaper.source?.start_page || "-"}-${currentPaper.source?.end_page || "-"} 页`;
+  paperMeta.textContent = `${currentPaper.source?.file_name || "试卷文件"} · 第 ${currentPaper.source?.start_page || "-"}-${currentPaper.source?.end_page || "-"} ${currentPaper.source?.unit || "页"}`;
   questionCount.textContent = questions.length;
   totalScore.textContent = "100";
   duration.textContent = currentPaper.duration_minutes || 120;
@@ -318,8 +318,8 @@ function renderCollection(collection) {
   hideGrade();
   recordPanel.classList.add("hidden");
   paperTitle.textContent = collection.title || "试卷集合";
-  paperDesc.textContent = `已从 PDF 中识别出 ${collection.papers?.length || 0} 套试卷`;
-  paperMeta.textContent = `${collection.source?.file_name || "PDF"} · ${collection.source?.page_count || 0} 页`;
+  paperDesc.textContent = `已从文件中识别出 ${collection.papers?.length || 0} 套试卷`;
+  paperMeta.textContent = `${collection.source?.file_name || "试卷文件"} · ${collection.source?.page_count || 0} ${collection.source?.unit || "页"}`;
   questionCount.textContent = collection.papers?.reduce((sum, paper) => sum + Number(paper.question_count || 0), 0) || 0;
   totalScore.textContent = String((collection.papers || []).length * 100 || 100);
   duration.textContent = "-";
@@ -348,7 +348,7 @@ function renderCollection(collection) {
       renderCollection(await response.json());
     }));
     item.querySelector("h3").appendChild(libraryDeleteButton(paper));
-    item.querySelector("p").textContent = `${paper.question_count || 0} 题 · 100 分 · 第 ${paper.start_page || "-"}-${paper.end_page || "-"} 页 · ${paper.quality?.label || "尚未检查"}${paper.repaired_from ? " · 修正版（保留原作答）" : ""}`;
+    item.querySelector("p").textContent = `${paper.question_count || 0} 题 · 100 分 · 第 ${paper.start_page || "-"}-${paper.end_page || "-"} ${collection.source?.unit || "页"} · ${paper.quality?.label || "尚未检查"}${paper.repaired_from ? " · 修正版（保留原作答）" : ""}`;
     const link = item.querySelector("a");
     link.href = paper.paper_url;
     link.textContent = paper.quality && paper.quality.status !== "ready" ? "预览并检查" : "进入考试";
@@ -426,7 +426,7 @@ function renderQuestion(question, section = {}) {
   doubt.textContent = "[存疑]";
   el.querySelector(".question-title").append(stem, doubt);
   el.querySelector(".badge").textContent = `${typeLabel(question.type)} · ${formatNumber(questionScore)} 分`;
-  el.querySelector(".question-foot span").textContent = `来源页：${sourcePages}`;
+  el.querySelector(".question-foot span").textContent = `来源${currentPaper.source?.unit || "页"}：${sourcePages}`;
   el.querySelector(".answer-area").appendChild(renderAnswerControl(question));
   el.querySelector(".note-box").addEventListener("input", markDraftDirty);
   doubt.addEventListener("click", () => {

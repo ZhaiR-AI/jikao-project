@@ -14,7 +14,7 @@
           <div class="mark">卷</div>
           <div>
             <h1>在线考试</h1>
-            <p>PDF 生成 · AI 判卷</p>
+            <p>导入试卷 · AI 判卷</p>
           </div>
         </a>
         <a class="study-entry" href="/study">今日学习</a>
@@ -22,15 +22,16 @@
 
         <form id="upload-form" class="upload">
           <label class="file-box">
-            <input id="pdf-file" name="file" type="file" accept="application/pdf" />
-            <span>上传 PDF 生成试卷</span>
+            <input id="pdf-file" name="file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <span>上传 PDF / Word / TXT / Markdown</span>
             <strong id="file-name">尚未选择文件</strong>
           </label>
           <label class="field">
-            <span>最多处理页数</span>
+            <span>PDF 最多处理页数</span>
             <input id="max-pages" type="number" min="1" placeholder="默认全部" />
           </label>
           <button id="generate-btn" type="submit">生成试卷</button>
+          <p class="card-legend">PDF 逐页用多模态模型识别；Word（.docx）、TXT、Markdown 读取文字后由大模型整理。含图片或公式的 Word 请先导出为 PDF。</p>
         </form>
 
         <div class="nav-panel hidden">
@@ -43,7 +44,7 @@
           <p class="card-legend">点击题号切换大题；滚动只浏览当前大题。<br />选中文字可加粗标黄，点击已标黄文字即可取消。</p>
         </div>
 
-        <div id="status" class="status">可以上传 PDF 生成试卷，也可以直接打开已有试卷链接。</div>
+        <div id="status" class="status">可以上传试卷文件生成试卷，也可以直接打开已有试卷链接。</div>
       </aside>
 
       <section class="exam-main">

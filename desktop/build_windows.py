@@ -16,7 +16,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = [
-    "cet4_parser.py", "collection_categories.py", "generation_jobs.py",
+    "cet4_parser.py", "collection_categories.py", "generation_jobs.py", "document_reader.py",
     "paper_generator.py", "paper_quality.py", "paper_routes.py", "paper_server.py",
     "paper_trash.py", "pdf_reader.py", "phrase_coverage.py", "study_routes.py",
     "study_store.py", "wrong_book_records.py", "wrong_book_review.py",
@@ -92,13 +92,13 @@ def main():
 HELP = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>成考助手 · 使用说明</title><style>body{font:17px/1.85 system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 24px;color:#17263d;background:#f7f9fc}section{background:white;border:1px solid #dbe3ed;border-radius:16px;padding:24px;margin:20px 0}h1,h2{line-height:1.4}code{background:#eef2f7;padding:2px 6px}a{color:#185abd}li{margin:8px 0}</style>
 <h1>成考助手 · Windows 便携版</h1><p>适用于 Windows 10/11 的 64 位电脑。无需安装 Python，无需输入命令。</p>
-<section><h2>选模型前必看</h2><p><strong>导入卷子必须使用支持图片输入和文字识别的多模态大模型（视觉模型）。</strong> 软件会把 PDF 页面转成图片交给模型读取题目。</p><p>纯文字聊天模型、只能生成图片的模型都不适用。请确认你使用的模型和平台 API 都支持图片输入。</p></section>
+<section><h2>选模型前必看</h2><p><strong>导入 PDF 必须使用支持图片输入和文字识别的多模态大模型（视觉模型）。</strong> PDF 一律逐页转成图片识别，不直接使用内嵌文字层。请确认模型和平台 API 都支持图片输入；纯文字聊天或只能生成图片的模型不适用于 PDF。</p><p>DOCX、TXT、Markdown 先读取文字，再交给大模型整理。含图片、公式对象或复杂自动编号的 Word 请先导出为 PDF；旧版 .doc 请另存为 .docx 或 PDF。听力原卷若只有选项，需自行播放配套音频。</p></section>
 <section><h2>第一次使用</h2><ol><li>右键 ZIP，选择“全部解压”，直接解压到桌面等较短路径。不要放进多层文件夹，否则 Windows 可能提示路径过长、无法解压。不要在压缩包内运行，不要只复制 EXE。</li>
 <li>双击“启动成考助手.exe”。</li><li>填写模型平台提供的<b>接口地址、模型名称和 API Key</b>，点击“保存配置并启动”。</li>
 <li>浏览器会自动打开试卷页面。第一次选一份只有一页、题目完整的 PDF，验证生成和判卷。</li></ol>
 <p>以后双击 EXE 即可，已保存配置会自动载入。暂时没有模型配置，也可以点“打开页面”浏览界面。</p></section>
 <section><h2>三项信息去哪里找？</h2><p>注册你选择的模型平台，进入开发者控制台：在“API 密钥”中创建密钥，在接口文档中找到 Base URL 和模型 ID。</p>
-<p>模型必须支持图片输入，平台必须提供兼容 OpenAI Chat Completions 的接口。聊天会员不等于 API 额度。</p>
+<p>处理 PDF 时模型必须支持图片输入；平台必须提供兼容 OpenAI Chat Completions 的接口。聊天会员不等于 API 额度。</p>
 <ul><li><b>接口地址：</b>平台的 API 基础地址，不是聊天网页地址，不要加末尾的 /chat/completions。</li><li><b>模型名称：</b>复制平台文档中的模型 ID，注意版本后缀。</li><li><b>API Key：</b>你自己的调用密钥。默认隐藏，勿向他人发送。</li></ul>
 <p><a href="https://github.com/ZhaiR-AI/jikao-project/blob/main/docs/MODEL_SETUP.md">查看详细教程及常见报错说明</a>（便携版在启动窗口填写，不需要手改 JSON）。</p>
 <p>识别、生成和 AI 判卷会把相关内容发给你选择的模型平台，使用你的额度，可能产生费用。能打开网页不代表模型已连接成功。</p></section>

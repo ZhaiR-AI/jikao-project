@@ -46,6 +46,10 @@ def validate_paper(paper):
     sections = paper.get("sections", [])
     seen_ids, seen_numbers, actual = set(), defaultdict(dict), defaultdict(set)
     source = paper.get("ocr_pages", [])
+    legacy_pdf_pages = [p["page"] for p in source if p.get("extraction_method") == "pdf_text"]
+    if legacy_pdf_pages:
+        add("pdf_requires_vision", "这份 PDF 使用了旧的文字层结果，请重新整理，改用多模态模型读取页面图片。",
+            "error", pages=legacy_pdf_pages)
     total_questions = 0
     for section in sections:
         label = section.get("title", "题目")
@@ -77,6 +81,9 @@ def validate_paper(paper):
                 add("invalid_options", f"“{label}”第 {number} 题有重复或空白选项。", "error", label, [number], pages)
             if not q.get("stem", "").strip() and skind not in {"listening", "cloze", "wordbank"}:
                 add("missing_stem", f"“{label}”第 {number} 题缺少题干。", "error", label, [number], pages)
+            if skind not in {"listening", "cloze", "wordbank"} and re.fullmatch(
+                    r"(?:第?\s*\d+\s*题|题目\s*\d+|Question\s*\d+|\[无法识别\])(?:[。.:：\s]*)", q.get("stem", "").strip(), re.I):
+                add("placeholder_stem", f"“{label}”第 {number} 题只有占位文字，缺少实际题干。", "error", label, [number], pages)
         if skind in {"reading", "cloze", "wordbank", "matching"}:
             containers = section.get("groups") or [section]
             for group in containers:

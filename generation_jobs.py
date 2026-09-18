@@ -113,7 +113,7 @@ def repair(paper_id):
     if not pages:
         raise ValueError("这份试卷没有已保存的原始识别文字，请重新上传 PDF")
     source = original.get("source", {})
-    pages = [p for p in pages if int(source.get("start_page") or 1) <= p["page"] <= int(source.get("end_page") or max(x["page"] for x in pages))]
+    pages = copy.deepcopy([p for p in pages if int(source.get("start_page") or 1) <= p["page"] <= int(source.get("end_page") or max(x["page"] for x in pages))])
     job_id = uuid4().hex
     old_job_id = original.get("generation_job_id")
     cached = {}
@@ -130,7 +130,8 @@ def repair(paper_id):
     doc = {"id": source.get("collection_id") or uuid4().hex,
            "source": {"file_name": source.get("file_name") or original["title"], "page_count": source.get("page_count", len(pages)),
                       "source_page_count": source.get("source_page_count", source.get("page_count", len(pages))),
-                      "ocr_model": source.get("ocr_model", "saved")}, "pages": pages}
+                      "ocr_model": source.get("ocr_model", "saved"), "input_type": source.get("input_type", "pdf"),
+                      "unit": source.get("unit", "页")}, "pages": pages}
     job = {"id": job_id, "created_at": now(), "original_name": doc["source"]["file_name"],
            "repair_of": paper_id, "stage": "queued", "progress": {},
            "state": {"ocr_doc": doc, "original": original, "chunks": cached,
@@ -192,18 +193,64 @@ def persist_repair(job, paper):
     return paper
 
 
+async def refresh_pdf_pages(job, llm):
+    """Repair old text-layer checkpoints using the actual saved page images."""
+    state = job["state"]
+    doc = state["ocr_doc"]
+    if not job["original_name"].lower().endswith(".pdf"):
+        return
+    pending = [(i, p) for i, p in enumerate(doc["pages"]) if p.get("extraction_method") != "vision_ocr"]
+    if not pending:
+        return
+    # Extracted chunks based on obsolete text must not survive re-recognition.
+    state["chunks"] = {}
+    total = len(doc["pages"])
+    done = total - len(pending)
+    advance(job, "ocr", done=done, total=total)
+    semaphore = asyncio.Semaphore(max(1, min(job.get("ocr_concurrency", 3), 4)))
+
+    async def refresh(index, page):
+        nonlocal done
+        image = (generator.PROJECT_DIR / page.get("image", "")).resolve()
+        if not image.is_relative_to(generator.PAGE_DIR.resolve()) or not image.is_file():
+            raise ValueError("旧识别结果需要重新读取页面图片，但图片已不存在，请重新上传原 PDF。")
+        async with semaphore:
+            text = await generator._ocr_page(llm, image, page["page"], doc["source"]["page_count"])
+            doc["pages"][index] = {**page, "text": text.strip(), "extraction_method": "vision_ocr"}
+            done += 1
+            advance(job, "ocr", done=done, total=total)
+
+    await asyncio.gather(*(refresh(i, p) for i, p in pending))
+    doc["source"]["ocr_model"] = generator.get_vision_model_name(llm)
+    save(job)
+
+
 async def run(job):
     state = job["state"]
     try:
         async with asyncio.timeout(3600):
             llm = manager()
+            if "ocr_doc" not in state and Path(job["pdf_path"]).suffix.lower() != ".pdf":
+                from document_reader import read_document_pages
+                advance(job, "render", done=0)
+                pages = await asyncio.to_thread(read_document_pages, Path(job["pdf_path"]))
+                collection_id = uuid4().hex
+                import shutil
+                shutil.copy2(job["pdf_path"], generator.UPLOAD_DIR / (collection_id + Path(job["pdf_path"]).suffix.lower()))
+                advance(job, "render", done=1)
+                advance(job, "ocr", done=len(pages), total=len(pages))
+                state["ocr_doc"] = generator.persist_ocr_document(collection_id=collection_id, original_name=job["original_name"],
+                    page_count=len(pages), ocr_model="document_text", ocr_pages=pages)
+                state["ocr_doc"]["source"].update(input_type="document", unit="段", source_page_count=len(pages))
+                _write_json(generator.OCR_DIR / f"{collection_id}.json", state["ocr_doc"])
+                save(job)
             if "ocr_doc" not in state:
                 if "render" not in state:
                     advance(job, "render", done=0)
                     state["render"] = await asyncio.to_thread(generator.render_pdf_for_ocr, Path(job["pdf_path"]), dpi=160, max_pages=job.get("max_pages"))
                     save(job)
                 rendered = state["render"]
-                cached = state.setdefault("ocr_pages", [])
+                cached = state["ocr_pages"] = [p for p in state.get("ocr_pages", []) if p.get("extraction_method") == "vision_ocr"]
                 advance(job, "ocr", done=len(cached), total=rendered["page_count"])
                 def on_page(page):
                     cached.append(page)
@@ -216,6 +263,7 @@ async def run(job):
                 state["ocr_doc"]["source"]["source_page_count"] = rendered.get("source_page_count", rendered["page_count"])
                 _write_json(generator.OCR_DIR / f"{rendered['collection_id']}.json", state["ocr_doc"])
                 save(job)
+            await refresh_pdf_pages(job, llm)
             doc = state["ocr_doc"]
             if "exams" not in state:
                 advance(job, "split", done=0)
@@ -226,7 +274,11 @@ async def run(job):
             jobs = generator.create_exam_build_jobs(original_name=job["original_name"], ocr_doc=doc, exams=state["exams"])
             if job.get("repair_of"):
                 jobs[0]["paper_id"] = job["repair_of"]
-            cached_chunks = state.setdefault("chunks", {})
+            cached_chunks = state["chunks"] = {
+                key: chunk for key, chunk in state.get("chunks", {}).items()
+                if isinstance(chunk, dict) and isinstance(chunk.get("data"), dict)
+                and isinstance(chunk["data"].get("sections"), list)
+            }
             keys = [f"{j['paper_id']}:{i}" for j in jobs if not j.get("standard_paper")
                     for i, _ in enumerate(generator._make_page_windows(j["scoped_pages"], window_size=2, step=1), 1)]
             advance(job, "extract", done=sum(k in cached_chunks for k in keys), total=len(keys), standard_papers=sum(bool(j.get("standard_paper")) for j in jobs))

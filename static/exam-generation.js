@@ -1,4 +1,4 @@
-const generationStages = { render: "准备 PDF", ocr: "文字识别", split: "识别试卷范围", extract: "题目整理", validate: "完整性检查", save: "保存试卷" };
+const generationStages = { render: "准备文件", ocr: "内容读取", split: "识别试卷范围", extract: "题目整理", validate: "完整性检查", save: "保存试卷" };
 const generationLabels = { queued: "排队中", running: "正在处理", completed: "生成完成", review: "生成完成，待检查", incomplete: "生成不完整", failed: "生成失败", interrupted: "生成中断" };
 let activeGenerationJob = null;
 let generationPollTimer = null;
@@ -38,7 +38,7 @@ function rememberGenerationJob(id) {
 
 async function startPaperGeneration(event) {
   event.preventDefault();
-  if (!fileInput.files[0]) { setStatus("请先选择一份 PDF。"); return; }
+  if (!fileInput.files[0]) { setStatus("请先选择 PDF、Word（.docx）、TXT 或 Markdown 文件。"); return; }
   if (activeGenerationJob && ["queued", "running"].includes(activeGenerationJob.status)) return;
   generateBtn.disabled = true;
   const panel = document.querySelector("#generation-panel");
@@ -52,7 +52,7 @@ async function startPaperGeneration(event) {
     const form = new FormData();
     form.append("file", fileInput.files[0]);
     const params = new URLSearchParams({ ocr_concurrency: "3" });
-    if (maxPages.value.trim()) params.set("max_pages", maxPages.value.trim());
+    if (/\.pdf$/i.test(fileInput.files[0].name) && maxPages.value.trim()) params.set("max_pages", maxPages.value.trim());
     const job = await generationRequest(`/api/paper/generation-jobs?${params}`, { method: "POST", body: form });
     watchGenerationJob(job);
   } catch (error) {
@@ -97,7 +97,8 @@ function renderGenerationJob(job) {
   for (const [stage, label] of Object.entries(generationStages)) {
     const progress = job.progress?.[stage];
     const state = progress ? (progress.total !== undefined ? `${progress.done || 0} / ${progress.total}` : stage === job.stage ? (job.status === "running" ? "进行中" : "未完成") : "已完成") : job.repair_of && ["render", "ocr", "split"].includes(stage) ? "复用已保存结果" : "尚未开始";
-    steps.appendChild(generationElement("li", `${label}：${state}${stage === "extract" && progress?.total === 0 ? "（标准结构直接整理）" : ""}`));
+    const displayLabel = stage === "ocr" ? (/\.pdf$/i.test(job.original_name) ? "多模态图片识别" : "读取文档内容") : label;
+    steps.appendChild(generationElement("li", `${displayLabel}：${state}${stage === "extract" && progress?.total === 0 ? "（标准结构直接整理）" : ""}`));
   }
   const actions = document.querySelector("#generation-actions");
   actions.replaceChildren();
@@ -154,7 +155,7 @@ async function showPaperQuality(paper) {
     for (const issue of quality.issues) {
       const row = generationElement("div", undefined, "quality-issue");
       row.appendChild(generationElement("span", `${issue.severity === "error" ? "需修复" : "待核对"}：${issue.message}`));
-      row.appendChild(generationButton(issue.pages.length ? `查看原文第 ${issue.pages.join("、")} 页` : "查看原文", () => showExamSource(paperId, issue.pages)));
+      row.appendChild(generationButton(issue.pages.length ? `查看原文第 ${issue.pages.join("、")} ${currentPaper?.source?.unit || "页"}` : "查看原文", () => showExamSource(paperId, issue.pages)));
       details.appendChild(row);
     }
     root.appendChild(details);
@@ -187,7 +188,7 @@ async function showExamSource(paperId, selectedPages = []) {
   }
   for (const page of source.pages || []) {
     if (selectedPages.length && !selectedPages.includes(page.page)) continue;
-    content.append(generationElement("h3", `原文第 ${page.page} 页`), generationElement("pre", page.text));
+    content.append(generationElement("h3", `原文第 ${page.page} ${source.unit || "页"}`), generationElement("pre", page.text));
   }
   if (!source.pages?.length) content.appendChild(generationElement("p", "没有保存的识别文字，请重新上传原始 PDF。"));
   document.querySelector("#source-dialog").showModal();

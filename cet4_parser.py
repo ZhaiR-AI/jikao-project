@@ -48,7 +48,7 @@ def build_cet4_paper(paper_id, original_name, exam_hint, scoped_pages):
             parsed = [{"id": m[1], "text": re.sub(r"\s+", " ", block[m.end():options[j + 1].start() if j + 1 < len(options) else len(block)]).strip()}
                       for j, m in enumerate(options)]
             parsed.sort(key=lambda option: option["id"])
-            stem = "请根据听力材料选择答案。" if listening else block[:options[0].start()]
+            stem = "本题的问题在听力音频中，PDF 仅提供选项。请播放原卷配套音频后作答。" if listening else block[:options[0].start()]
             found.append(question(number, stem, parsed, score=(1 if number <= 15 else 2) if listening else 2))
         return found if [int(q["number"]) for q in found] == list(range(start, end + 1)) else []
 
@@ -96,7 +96,7 @@ def build_cet4_paper(paper_id, original_name, exam_hint, scoped_pages):
     definitions = [
         ("writing", "作文", 15, "", [question("作文", parts["I"], kind="essay", score=15)]),
         ("listening", "听力（第 1—15 题）", 15, "请结合原卷听力音频作答。本 PDF 未提供音频。", listening[:15]),
-        ("listening", "听力（第 16—25 题）", 20, "", listening[15:]),
+        ("listening", "听力（第 16—25 题）", 20, "请结合原卷听力音频作答。本 PDF 未提供音频。", listening[15:]),
         ("wordbank", "选词填空", 5, bank_passage, wordbank),
         ("matching", "阅读匹配", 10, matching_passage, matching),
         ("reading", "阅读", 20, "", []),
@@ -116,5 +116,5 @@ def build_cet4_paper(paper_id, original_name, exam_hint, scoped_pages):
                 q["source_pages"] = [pages[0 if kind == "writing" else -1]["page"]]
         result.append(section)
     return {"id": paper_id, "title": exam_hint.get("title") or original_name.rsplit(".", 1)[0],
-            "exam_format": "cet4", "description": "按原卷题型整理；听力音频需另行提供。",
+            "exam_format": "cet4", "description": "按原卷题型整理；练习按百分制计分：作文 15、听力 35、阅读 35、翻译 15。听力题的问题需要原卷配套音频，PDF 仅含选项。",
             "duration_minutes": 125, "total_score": 100, "sections": result}
