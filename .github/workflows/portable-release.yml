@@ -1,0 +1,61 @@
+name: Build Windows portable release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install tested dependencies in a clean build environment
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build portable ZIP
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v') } else { '0.1.0-dev' }
+          .\.venv\Scripts\python.exe desktop/build_windows.py --version $version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test embedded runtime without system Python on PATH
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem dist -Directory -Filter 'Chengkao-Windows-*' | Select-Object -First 1
+          $env:PATH = "$env:WINDIR\System32"
+          Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          $test = Start-Process -FilePath (Join-Path $package.FullName '启动成考助手.exe') -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru -Wait
+          Get-Content (Join-Path $package.FullName 'smoke-result.txt')
+          if ($test.ExitCode -ne 0) {
+            Get-Content (Join-Path $package.FullName '启动日志.txt') -ErrorAction SilentlyContinue
+            exit 1
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-portable
+          path: |
+            dist/Chengkao-Windows-*.zip
+            dist/Chengkao-Windows-*.sha256
+      - name: Publish preview release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $assets = @(Get-ChildItem dist -File | Where-Object { $_.Name -like 'Chengkao-Windows-*' } | Select-Object -ExpandProperty FullName)
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --prerelease --title "成考助手 $env:GITHUB_REF_NAME · Windows 便携试用版" --notes-file desktop/RELEASE_NOTES.md
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

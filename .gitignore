@@ -8,6 +8,8 @@ mcp.json
 # Local data, study records, uploads, and runtime state
 data/
 outputs/
+dist/
+build/
 logs/
 test-results/
 .agentclaw/
