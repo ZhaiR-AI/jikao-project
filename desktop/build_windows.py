@@ -92,6 +92,7 @@ def main():
 HELP = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>成考助手 · 使用说明</title><style>body{font:17px/1.85 system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 24px;color:#17263d;background:#f7f9fc}section{background:white;border:1px solid #dbe3ed;border-radius:16px;padding:24px;margin:20px 0}h1,h2{line-height:1.4}code{background:#eef2f7;padding:2px 6px}a{color:#185abd}li{margin:8px 0}</style>
 <h1>成考助手 · Windows 便携版</h1><p>适用于 Windows 10/11 的 64 位电脑。无需安装 Python，无需输入命令。</p>
+<section><h2>选模型前必看</h2><p><strong>导入卷子必须使用支持图片输入和文字识别的多模态大模型（视觉模型）。</strong> 软件会把 PDF 页面转成图片交给模型读取题目。</p><p>纯文字聊天模型、只能生成图片的模型都不适用。请确认你使用的模型和平台 API 都支持图片输入。</p></section>
 <section><h2>第一次使用</h2><ol><li>右键 ZIP，选择“全部解压”，直接解压到桌面等较短路径。不要放进多层文件夹，否则 Windows 可能提示路径过长、无法解压。不要在压缩包内运行，不要只复制 EXE。</li>
 <li>双击“启动成考助手.exe”。</li><li>填写模型平台提供的<b>接口地址、模型名称和 API Key</b>，点击“保存配置并启动”。</li>
 <li>浏览器会自动打开试卷页面。第一次选一份只有一页、题目完整的 PDF，验证生成和判卷。</li></ol>

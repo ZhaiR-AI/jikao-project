@@ -175,7 +175,7 @@ sealed class LauncherForm : Form
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         AddLabel("第一次使用：填写模型平台提供的三项信息", 22, 20, 600, 28);
-        AddLabel("无需安装 Python。模型调用使用你自己的账号和额度。", 22, 53, 605, 28);
+        AddLabel("【必读】卷子识别需要支持图片输入的多模态大模型。", 22, 53, 605, 28);
         AddField("接口地址", endpoint, 96);
         AddField("模型名称", model, 143);
         AddField("API Key", key, 190);
