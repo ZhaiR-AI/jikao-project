@@ -1,0 +1,40 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+models.json
+mcp.json
+
+# Local data, study records, uploads, and runtime state
+data/
+outputs/
+logs/
+test-results/
+.agentclaw/
+.knowledgebase/
+.paper-server.pid
+English knowledge/
+做的真题/
+
+# Environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.idea/
+.vscode/
+
+# Personal study documents and original media
+/*.md
+!/README.md
+!/GIT_SETUP.md
+!/agent.md
+*.pdf
+*.doc
+*.docx
+*.zip
+*.mp4
+*.log
+*.tmp

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>错题本</title>
+    <link rel="stylesheet" href="/paper-static/wrong_book.css?v=20260917-5" />
+  </head>
+  <body>
+    <header class="wrong-topbar">
+      <a class="wrong-brand" href="/wrong-book" aria-label="错题本首页">
+        <span class="wrong-mark">错</span>
+        <span>
+          <strong>错题本</strong>
+          <small>ENGLISH REVIEW</small>
+        </span>
+      </a>
+      <nav class="wrong-nav" aria-label="主导航">
+        <a href="/study">今日学习</a>
+        <a href="/exam">考试卷子</a>
+        <a class="active" href="/wrong-book">错题本</a>
+      </nav>
+    </header>
+
+    <main class="wrong-shell">
+      <section class="wrong-heading">
+        <div>
+          <p class="eyebrow">REVIEW QUEUE</p>
+          <h1>错题本</h1>
+          <p id="result-caption" class="muted">正在读取错题记录</p>
+        </div>
+        <button id="refresh-list" type="button" class="button-secondary">刷新</button>
+      </section>
+
+      <section id="exam-type-filter" class="exam-type-tabs" aria-label="题目类型">
+        <button type="button" data-exam-type="choice" aria-pressed="true">
+          <span>选择</span><strong id="type-count-choice">0</strong>
+        </button>
+        <button type="button" data-exam-type="translation" aria-pressed="false">
+          <span>汉译英</span><strong id="type-count-translation">0</strong>
+        </button>
+        <button type="button" data-exam-type="reading" aria-pressed="false">
+          <span>阅读</span><strong id="type-count-reading">0</strong>
+        </button>
+      </section>
+
+      <section class="category-filter-band" aria-label="错题分类">
+        <span>错题分类</span>
+        <div id="category-filter" class="category-filter-buttons" role="group">
+          <button type="button" data-category="all" aria-pressed="true">全部错题</button>
+          <button type="button" data-category="grammar" aria-pressed="false">语法</button>
+          <button type="button" data-category="vocabulary" aria-pressed="false">单词</button>
+          <button type="button" data-category="phrase" aria-pressed="false">词组</button>
+          <button type="button" data-category="translation" aria-pressed="false">翻译</button>
+          <button type="button" data-category="noted" aria-pressed="false">记笔记的题</button>
+        </div>
+      </section>
+
+      <section class="wrong-toolbar" aria-label="错题筛选">
+        <div id="status-filter" class="segmented-control" role="group" aria-label="状态">
+          <button type="button" data-status="all" aria-pressed="true">全部</button>
+          <button type="button" data-status="unreviewed" aria-pressed="false">待重做</button>
+          <button type="button" data-status="reviewed" aria-pressed="false">已复习</button>
+          <button type="button" data-status="mastered" aria-pressed="false">已掌握</button>
+        </div>
+        <label class="filter-field search-field">
+          <span>搜索</span>
+          <input id="wrong-search" type="search" placeholder="题干、试卷或笔记" autocomplete="off" />
+        </label>
+      </section>
+
+      <section class="wrong-results">
+        <section class="practice-record-panel" aria-label="错题本做题记录">
+          <div class="practice-record-head">
+            <div><span>当前做题记录</span><strong id="practice-current-record">正在载入记录</strong><small id="practice-record-save-state" role="status"></small></div>
+            <div class="practice-record-actions">
+              <button id="practice-history-toggle" type="button" class="card-action secondary" aria-expanded="false">历史记录</button>
+              <button id="practice-new-record" type="button" class="card-action" disabled>新建记录</button>
+            </div>
+          </div>
+          <div id="practice-record-history" hidden></div>
+        </section>
+        <div class="results-head">
+          <h2 id="results-title">选择错题</h2>
+          <span id="visible-count" class="count-pill">0 题</span>
+        </div>
+        <div class="practice-layout">
+          <aside class="practice-nav" aria-label="当前题型答题卡">
+            <h3 id="practice-nav-title">选择答题卡</h3>
+            <p id="practice-progress">0/0 已答</p>
+            <div id="practice-question-card"></div>
+            <p class="practice-legend">蓝色：已答 · 黄绿各半：存疑<br />提交后绿色为正确，红色为错误。</p>
+          </aside>
+          <div id="wrong-list" class="wrong-list" aria-live="polite"></div>
+        </div>
+        <div id="wrong-empty" class="wrong-empty" hidden>
+          <strong>没有符合条件的错题</strong>
+          <span>完成判卷后，答错的题会自动进入错题本。</span>
+        </div>
+      </section>
+      <footer class="practice-footer">
+        <p id="practice-summary" role="status">完成当前列表后，可统一提交作答。</p>
+        <button id="submit-practice" type="button" class="card-action">提交本组答案</button>
+      </footer>
+    </main>
+
+    <p id="wrong-status" class="wrong-status-message" role="status"></p>
+    <script src="/paper-static/exam-tools.js?v=20260917-1"></script>
+    <script src="/paper-static/wrong_book_practice.js?v=20260917-4"></script>
+    <script src="/paper-static/wrong_book_records.js?v=20260917-5"></script>
+    <script src="/paper-static/wrong_book.js?v=20260917-4"></script>
+  </body>
+</html>

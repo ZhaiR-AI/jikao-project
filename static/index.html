@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>在线考试</title>
+    <meta name="exam-version" content="__EXAM_VERSION__" />
+    <link rel="stylesheet" href="/paper-static/styles.css?v=__EXAM_VERSION__" />
+  </head>
+  <body data-view="overview">
+    <main class="exam-shell">
+      <aside class="exam-nav">
+        <a class="brand" href="/exam" aria-label="返回卷子首页">
+          <div class="mark">卷</div>
+          <div>
+            <h1>在线考试</h1>
+            <p>PDF 生成 · AI 判卷</p>
+          </div>
+        </a>
+        <a class="study-entry" href="/study">今日学习</a>
+        <a class="study-entry" href="/wrong-book">错题本</a>
+
+        <form id="upload-form" class="upload">
+          <label class="file-box">
+            <input id="pdf-file" name="file" type="file" accept="application/pdf" />
+            <span>上传 PDF 生成试卷</span>
+            <strong id="file-name">尚未选择文件</strong>
+          </label>
+          <label class="field">
+            <span>最多处理页数</span>
+            <input id="max-pages" type="number" min="1" placeholder="默认全部" />
+          </label>
+          <button id="generate-btn" type="submit">生成试卷</button>
+        </form>
+
+        <div class="nav-panel hidden">
+          <div class="panel-title">
+            <span>答题卡</span>
+            <strong id="answered-count">0/0</strong>
+          </div>
+          <div id="question-card" class="question-card"></div>
+          <p class="card-legend"><span></span> 黄绿各半：存疑（不计入已答题数）</p>
+          <p class="card-legend">点击题号切换大题；滚动只浏览当前大题。<br />选中文字可加粗标黄，点击已标黄文字即可取消。</p>
+        </div>
+
+        <div id="status" class="status">可以上传 PDF 生成试卷，也可以直接打开已有试卷链接。</div>
+      </aside>
+
+      <section class="exam-main">
+        <section id="version-notice" class="generation-panel" hidden role="status"></section>
+        <section id="generation-panel" class="generation-panel" hidden aria-label="生成进度">
+          <h3 id="generation-title">试卷生成</h3>
+          <p id="generation-state" role="status"></p>
+          <ol id="generation-steps"></ol>
+          <div id="generation-actions" class="generation-actions"></div>
+          <details><summary>最近生成任务</summary><div id="generation-history"></div></details>
+        </section>
+        <header class="exam-header">
+          <div>
+            <p id="paper-meta" class="meta">等待载入</p>
+            <h2 id="paper-title">请选择或生成一份试卷</h2>
+            <p id="paper-desc"></p>
+          </div>
+          <div class="stats">
+            <div><span id="question-count">0</span><small>题目</small></div>
+            <div><span id="total-score">100</span><small>总分</small></div>
+            <div><span id="duration">0</span><small>分钟</small></div>
+          </div>
+        </header>
+
+        <section id="record-panel" class="record-panel hidden" aria-label="做题记录">
+          <div class="record-panel-head">
+            <div>
+              <p class="meta">当前做题记录</p>
+              <strong id="current-record">未保存的新记录</strong>
+            </div>
+            <div class="record-actions">
+              <button id="toggle-record-history" type="button" aria-expanded="false">历史记录</button>
+              <button id="new-record" type="button">新建记录</button>
+            </div>
+          </div>
+          <div id="record-history" class="record-history hidden"></div>
+        </section>
+        <section id="paper-quality" class="generation-panel" hidden aria-label="试卷检查结果"></section>
+        <dialog id="source-dialog" aria-label="查看问题与原文">
+          <button id="source-close" type="button">关闭原文</button>
+          <div id="source-content"></div>
+        </dialog>
+
+        <section id="grade-panel" class="grade-panel hidden">
+          <div>
+            <p class="meta">AI 判卷结果</p>
+            <h3><span id="grade-score">0</span>/100</h3>
+            <p id="grade-summary"></p>
+          </div>
+          <button id="review-wrong" type="button">查看错题</button>
+        </section>
+
+        <section id="wrong-book-panel" class="wrong-book-panel hidden">
+          <div class="wrong-book-head">
+            <div>
+              <p class="meta">错题本</p>
+              <h3>需要重新认识的题</h3>
+            </div>
+            <button id="close-wrong-book" type="button">收起</button>
+          </div>
+          <div id="wrong-book-list" class="wrong-book-list"></div>
+        </section>
+
+        <div id="paper" class="paper empty">
+          <p>试卷会显示在这里。答题后点击底部“提交并 AI 判卷”。</p>
+        </div>
+
+        <footer class="actions overview">
+          <button id="export-json" type="button" disabled>下载试卷 JSON</button>
+          <button id="export-answers" type="button" disabled>导出作答</button>
+          <button id="save-answers" type="button" disabled>保存作答</button>
+          <button id="clear-answers" type="button" disabled>清空作答</button>
+          <button id="submit-paper" type="button" disabled>提交并 AI 判卷</button>
+        </footer>
+      </section>
+    </main>
+    <script src="/paper-static/exam-tools.js?v=__EXAM_VERSION__"></script>
+    <script src="/paper-static/exam-generation.js?v=__EXAM_VERSION__"></script>
+    <script src="/paper-static/app.js?v=__EXAM_VERSION__"></script>
+  </body>
+</html>

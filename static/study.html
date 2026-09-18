@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>今日学习</title>
+    <link rel="stylesheet" href="/paper-static/study.css" />
+  </head>
+  <body>
+    <main class="study-shell">
+      <header class="study-topbar">
+        <div class="study-brand">
+          <div class="study-mark">学</div>
+          <div>
+            <p class="eyebrow">ENGLISH STUDY</p>
+            <h1>今日学习</h1>
+          </div>
+        </div>
+        <nav class="study-nav" aria-label="主导航">
+          <a class="nav-link active" href="/study">今日学习</a>
+          <a class="nav-link" href="/exam">考试卷子</a>
+          <a class="nav-link" href="/wrong-book">错题本</a>
+          <label class="date-control">
+            <span>日期</span>
+            <input id="study-date" type="date" />
+          </label>
+        </nav>
+      </header>
+
+      <div class="study-layout">
+        <section class="study-main">
+          <section class="study-overview">
+            <div>
+              <p class="eyebrow">DAILY PLAN</p>
+              <h2 id="plan-title">今天的学习计划</h2>
+              <p id="plan-date" class="muted"></p>
+            </div>
+            <div class="overview-actions">
+              <button id="toggle-pause" type="button" class="button-secondary">暂停今天</button>
+              <button id="copy-report" type="button" class="button-secondary">复制日报</button>
+            </div>
+          </section>
+
+          <section class="metric-row" aria-label="今日学习统计">
+            <div class="metric-box">
+              <span id="planned-minutes">0</span>
+              <small>计划分钟</small>
+            </div>
+            <div class="metric-box">
+              <span id="actual-minutes">0</span>
+              <small>有效分钟</small>
+            </div>
+            <div class="metric-box">
+              <span id="completed-count">0/0</span>
+              <small>完成任务</small>
+            </div>
+            <div class="metric-box">
+              <span id="plan-progress">0%</span>
+              <small>计划进度</small>
+            </div>
+          </section>
+
+          <section class="study-section task-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">TASKS</p>
+                <h2>今天要做的事</h2>
+              </div>
+              <span id="plan-status" class="status-pill">等待计划</span>
+            </div>
+            <div id="task-list" class="task-list"></div>
+            <div id="empty-tasks" class="empty-state">还没有今天的计划。把我给你的计划 JSON 粘贴到下面导入。</div>
+          </section>
+
+          <section class="study-section import-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">PLAN INPUT</p>
+                <h2>导入我的计划</h2>
+              </div>
+              <span class="muted">结构化计划</span>
+            </div>
+            <textarea id="plan-json" class="plan-input" spellcheck="false" placeholder='{"date":"2026-07-28","effective_minutes":200,"tasks":[{"title":"复习错题","type":"错题复习","planned_minutes":40,"acceptance":"重新做5道，至少做对4道","priority":"must"}]}'></textarea>
+            <div class="form-actions">
+              <button id="import-plan" type="button">导入并替换当天计划</button>
+              <span id="import-status" class="form-status"></span>
+            </div>
+          </section>
+        </section>
+
+        <aside class="study-side">
+          <section class="study-section feedback-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">DAILY FEEDBACK</p>
+                <h2>学习结束反馈</h2>
+              </div>
+            </div>
+            <form id="feedback-form" class="feedback-form">
+              <div class="field-grid">
+                <label><span>计划分钟</span><input id="feedback-planned" type="number" min="0" /></label>
+                <label><span>实际分钟</span><input id="feedback-actual" type="number" min="0" /></label>
+                <label><span>复习单词</span><input id="vocabulary-reviewed" type="number" min="0" /></label>
+                <label><span>单词正确</span><input id="vocabulary-correct" type="number" min="0" /></label>
+                <label><span>复习短语</span><input id="phrase-reviewed" type="number" min="0" /></label>
+                <label><span>短语正确</span><input id="phrase-correct" type="number" min="0" /></label>
+                <label><span>完成真题</span><input id="questions-completed" type="number" min="0" /></label>
+                <label><span>真题正确</span><input id="questions-correct" type="number" min="0" /></label>
+              </div>
+              <label><span>今天问过的题</span><textarea id="asked-questions" rows="3" placeholder="题号或题目"></textarea></label>
+              <label><span>仍然不会</span><textarea id="unknown-items" rows="3" placeholder="例如：过去分词作定语、does 后动词原形"></textarea></label>
+              <label><span>新增薄弱点</span><textarea id="weak-points" rows="3" placeholder="聊天分析后的知识点"></textarea></label>
+              <label><span>明天可用分钟</span><input id="next-available-minutes" type="number" min="0" /></label>
+              <label><span>精神状态</span><input id="mood" type="text" placeholder="正常 / 疲惫 / 精力好" /></label>
+              <label><span>补充说明</span><textarea id="feedback-notes" rows="3"></textarea></label>
+              <div class="form-actions">
+                <button type="submit">保存今日反馈</button>
+                <span id="feedback-status" class="form-status"></span>
+              </div>
+            </form>
+          </section>
+
+          <section class="study-section report-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">REPORT</p>
+                <h2>交给聊天助手的日报</h2>
+              </div>
+            </div>
+            <textarea id="report-text" class="report-text" readonly placeholder="保存今日反馈后，这里会生成可复制的日报"></textarea>
+            <a href="/wrong-book" class="button-link full-button">查看错题本</a>
+          </section>
+
+          <section class="study-section weak-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">WRONG BOOK</p>
+                <h2>不会类型</h2>
+              </div>
+              <span id="wrong-total" class="status-pill">0题</span>
+            </div>
+            <div id="wrong-summary" class="wrong-summary"></div>
+          </section>
+        </aside>
+      </div>
+      <p id="global-status" class="global-status" role="status"></p>
+    </main>
+    <script src="/paper-static/study.js"></script>
+  </body>
+</html>
